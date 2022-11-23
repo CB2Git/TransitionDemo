@@ -187,7 +187,26 @@ if (view4.getScaleX() == 0.5f && view4.getScaleY() == 0.5f) {
 2. 创建执行动画，参数为当前值和目标值，根据对应算法来完成动画效果
 3. 根据目标状态的属性值和记录的缓存属性值，调用创建好的动画对象执行即可
 
-那落实到代码中，首先先集成 `Transition` 类，会让你实现三个方法：`captureStartValues`、`captureEndValues`和`createAnimator`。
+那落实到代码中，首先先继承 `Transition` 类，会让你实现三个方法：`captureStartValues`、`captureEndValues`和`createAnimator`。
+
+```java
+public class MyTransition extends Transition {
+
+    @Override
+    public void captureStartValues(TransitionValues transitionValues) {
+
+    }
+
+    @Override
+    public void captureEndValues(TransitionValues transitionValues) {
+
+    }
+
+    @Override
+    public Animator createAnimator(ViewGroup sceneRoot, TransitionValues startValues, final TransitionValues endValues) {
+    }
+}
+```
 
 1. 定义你关心的**属性值**；
 
@@ -204,18 +223,26 @@ if (view4.getScaleX() == 0.5f && view4.getScaleY() == 0.5f) {
 	```java
     void captureStartValues(TransitionValues transitionValues)
     void captureEndValues(TransitionValues transitionValues);
-  ```
-    上述方法分别存储起始状态下对应的属性值：
+   ```
+   `captureStartValues`与` captureEndValues`回调时机，当我们调用`TransitionManager.beginDelayedTransition`的时候，会回调`captureStartValues`，这个时候我们可以保存初始值，然后当控件的属性比如颜色、大小等发生变化的时候，会回调`captureEndValues`，这个时候我们能拿到目标值
 
+   上述方法分别存储起始状态下对应的属性值：
+   
     ```java
     transitionValues.values.put(PROPNAME_TEXT_COLOR, view.getCurrentTextColor());
     ```
-3. 创建动画；
+   
+3. 创建动画
 
 	```java
     Animator createAnimator(ViewGroup sceneRoot, TransitionValues startValues, final TransitionValues endValues)
-  ```
-    参数值的 `startValues`和`endValues`分别可以拿到你存储的属性值，之后创建动画并返回即可，后续系统会根据你创建的动画进行转场。
+   ```
+
+    参数值的 `startValues`和`endValues`分别可以拿到你存储的属性值，之后创建动画并返回即可，后续系统会根据你创建的动画进行转场。当我们进行动画的时候，需要使用**endValues.view**，因为**startValues.view**可能是另一个控件(两个Activity之间转场)
+   
+   **TransitionManager会遍历`startValues`和`endValues`里面的每一个保存值，如果不相同，才会回调createAnimator**
+   
+   
 
 
 是不是很简单，接下来通过几个案例带大家感受一下：
@@ -234,6 +261,16 @@ private static String PROPNAME_TEXT_LEVEL = "xiaweizi:changeTextTypeface:level";
 分别代表文本内容变化、文本颜色变化、文本大小变化和文本字体变化。我们只挑一个文本颜色来看一下动画是如何实现的：
 
 ```java
+//直接调用获取属性的方法
+override fun captureStartValues(transitionValues: TransitionValues?) {
+    captureValues(transitionValues)
+}
+
+//直接调用获取属性的方法
+override fun captureEndValues(transitionValues: TransitionValues?) {
+    captureValues(transitionValues)
+}
+
 // 记录下起始状态属性值
 private void captureValues(TransitionValues transitionValues) {
     if (transitionValues == null || !(transitionValues.view instanceof TextView)) return;
@@ -405,7 +442,8 @@ protected void onDraw(Canvas canvas) {
 	```java
     mScene1 = Scene.getSceneForLayout(mRoot, R.layout.layout_scene1, this);
     mScene2 = Scene.getSceneForLayout(mRoot, R.layout.layout_scene2, this);
-  ```
+   ```
+
 3. 创建转场 `Transition`；我们把之前自定的组合成 `TransitionSet`：
 	```java
     public class SceneTransition extends TransitionSet {
@@ -423,15 +461,21 @@ protected void onDraw(Canvas canvas) {
                   .addTransition(new ChangeBounds());
       }
 	}
-  ```
+	```
 4. 开始切换场景；
-	```java
+    ```java
     TransitionManager.go(mScene1, mTransition);
     TransitionManager.go(mScene2, mTransition);
-  ```
+    ```
 
 ## 总结
 
 到此，先详细的和大家分享了系统自带的 `Transition`，并分析了其实现细节和原理，提供了多个自定义 `Transition`，接着了解了 `Scene` 创建过程，并通过简答的 `demo` 实现了从一个场景到另一个场景的过度效果，由浅入深，图文并茂，希望可以帮助到大家。
 
 
+
+> 参考文档
+>
+> https://blog.csdn.net/qibin0506/article/details/53248597
+>
+> https://juejin.cn/post/6880409898363027463
